@@ -7,6 +7,7 @@ ref: https://docs.astronomer.io/learn/airflow-passing-data-between-tasks
 
 import os
 from datetime import datetime
+import json
 
 from airflow.decorators import dag, task
 from airflow.operators.python import get_current_context
@@ -15,9 +16,10 @@ AIRFLOW_HOME = os.getenv("AIRFLOW_HOME")
 
 DEFAULT_DAG_PARAMS = dict(
     team="payment",
-    hamilton_config=dict(
-        raw_data_path="/some/path/to/file.parquet",
+    hamilton_config=json.dumps(dict(
+        raw_data_path=f"{AIRFLOW_HOME}/plugins/data/raw/Absenteeism_at_work.csv",
         season="summer",
+        )
     ),
 )
 
@@ -52,7 +54,7 @@ def hamilton_how_to_dag():
         from hamilton import driver
 
         # 1. load data from external source
-        raw_df = pd.read_csv(f"{AIRFLOW_HOME}/plugins/data/Absenteeism_at_work.csv", sep=";")
+        raw_df = pd.read_csv(f"{AIRFLOW_HOME}/plugins/data/raw/Absenteeism_at_work.csv", sep=";")
 
         # 2. instantiate driver
         # the Python module `feature_logic` is passed to the driver
@@ -108,7 +110,7 @@ def hamilton_how_to_dag():
         # define the driver config with the key `location` and the value poiting to the csv
         # data source. This will be read as `path` value of the `@load_from.csv()` decorator
         # of `raw_data__base()` found in `data_loaders.py`
-        config = {"location": f"{AIRFLOW_HOME}/plugins/data/Absenteeism_at_work.csv"}
+        config = {"location": f"{AIRFLOW_HOME}/plugins/data/raw/Absenteeism_at_work.csv"}
 
         # 2. instantiate driver
         # both Python module `feature_logic` and `data_loaders` are passed to driver
@@ -141,10 +143,13 @@ def hamilton_how_to_dag():
         from hamilton import driver
 
         # print to airflow logs
+        print("Raw hamilton_config:", hamilton_config)
         print("config type: ", type(hamilton_config))
         print("config content: ", hamilton_config)
+        hamilton_config_dict = json.loads(hamilton_config)
 
-        dr = driver.Driver(hamilton_config, feature_logic)  # noqa: F841
+
+        dr = driver.Driver(hamilton_config_dict, feature_logic)  # noqa: F841
         ...
 
     @task
@@ -163,8 +168,9 @@ def hamilton_how_to_dag():
         # print to airflow logs
         print("config type: ", type(hamilton_config))
         print("config content: ", hamilton_config)
+        hamilton_config_dict = json.loads(hamilton_config)
 
-        dr = driver.Driver(hamilton_config, feature_logic)  # noqa: F841
+        dr = driver.Driver(hamilton_config_dict, feature_logic)  # noqa: F841
         ...
 
     (
